@@ -1,2 +1,2 @@
-export { KakaoLink } from './KakaoLink';
-export { Plain } from './Plain';
+export * from './KakaoLink';
+export * from './Plain';
