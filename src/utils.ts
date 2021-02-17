@@ -1,19 +1,28 @@
-import { Socket } from 'socket.io';
+import { createServer, Server, Socket } from 'net';
+import { RKServer } from './client';
 import { Message } from './message';
+import { Worker } from './network';
 
 export class RKUtils {
   constructor(msg: Message) {
     this.socket = msg.socket;
+    this.server = msg.server;
     this.profileImage = msg.getProfileImage();
   }
-  socket: Socket;
-  profileImage: string;
+  private socket: Worker;
+  private server: RKServer;
+  private profileImage: string;
   async eval(x: string): Promise<string> {
     return new Promise((resolve, _) => {
-      this.socket.emit('eval', x);
-      this.socket.on('evaled', (arg: string) => {
-        resolve(arg);
-      });
+      this.socket.send(
+        JSON.stringify({
+          event: 'eval',
+          args: x,
+        })
+      );
+      this.server.on('evaled', (arg: string) => {
+        resolve(arg)
+      })
     });
   }
   hashCode(str: string) {

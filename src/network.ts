@@ -37,7 +37,6 @@ export class Worker {
     let res: any;
     this.bufferedBytes -= size;
 
-    console.log(this.queue)
     if (size === this.queue[0].length) return this.queue.shift();
 
     if (size < this.queue[0].length) {
@@ -64,6 +63,8 @@ export class Worker {
 
       size -= length;
     }
+
+    return res
   }
 
   private getHeader(): void {
@@ -90,11 +91,10 @@ export class Worker {
         this.getPayload();
       }
     }
-    this.socket.end();
   }
 
   private header(msgLength: number): void {
-    this.packet.header = { length: msgLength };
+    this.packet.headerLength = msgLength
   }
 
   public send(msg: string): void {
@@ -105,7 +105,7 @@ export class Worker {
 
     let contentLength = Buffer.allocUnsafe(2);
 
-    contentLength.writeUInt16BE(this.packet.header.length);
+    contentLength.writeUInt16BE(this.packet.headerLength!);
 
     this.socket.write(contentLength);
     this.socket.write(this.packet.msg);
@@ -114,9 +114,7 @@ export class Worker {
 
   socket: Socket;
   packet: {
-    header?: {
-      length: number;
-    };
+    headerLength?: number;
     msg?: Buffer;
   } = {};
   process: boolean;

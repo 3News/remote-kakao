@@ -1,13 +1,16 @@
-import express from 'express';
-import socketio from 'socket.io';
-import { createServer } from 'http';
+import { createServer, Server, Socket } from 'net';
 import { EventEmitter } from 'events';
 import { Message } from './message';
+import { Worker } from './network';
+import { v4 } from 'uuid';
 
-const app = express();
-const server = createServer(app);
-const io = socketio(server);
 const port = process.env.PORT || 3000;
+const clients: Array<{
+  socket: Socket;
+  net: Worker;
+  uuid: string;
+}> = [];
+const server: Server = createServer();
 
 export type RKEvent = 'login' | 'message';
 
@@ -22,54 +25,69 @@ export class RKServer extends EventEmitter {
   private email: string = '';
   private password: string = '';
   private jsKey: string = '';
-  private s: SocketIO.Socket | undefined;
 
   public login(useKakaoLink: true, email: string, password: string): void;
   public login(useKakaoLink?: false): void;
-  public login(useKakaoLink?: boolean, email?: string, password?: string): void {
-    if (!!useKakaoLink) {
+  public login(
+    useKakaoLink?: boolean,
+    email?: string,
+    password?: string
+  ): void {
+    if (useKakaoLink) {
       this.email = String(email);
       this.password = String(password);
     }
 
-    // app.get('/send/:msg', (req, res) => {
-    //  if (this.s === undefined) return res.send({ message: 'no session!', success: false });
-    //  this.s.emit('send', { messageType: 'plain', room: '카카오톡 봇 커뮤니티', message: req.params.msg });
-    //  res.send({ message: 'success!', success: true });
-    // });
-
     const self = this;
 
-    io.on('connection', (socket: SocketIO.Socket) => {
-      console.log(`${socket.id} connected!`);
-      socket.on(
-        'chat',
-        (args: {
-          sender: string;
-          content: string;
-          room: string;
-          isGroupChat: boolean;
-          profileImage: string;
-          packageName: string;
-        }) => {
-          self.s = socket;
-          self.emit(
-            'message',
-            new Message(
-              args.sender,
-              args.content,
-              args.room,
-              args.isGroupChat,
-              args.profileImage,
-              args.packageName,
-              self.s
-            )
-          );
+    server.on('connection', (socket) => {
+      const uuid = v4();
+      console.log(`${uuid} connected!`);
+
+      const net = new Worker(socket, (data) => {
+        const { event, args } = JSON.parse(data.toString());
+
+        switch (event) {
+          case 'chat':
+            self.emit(
+              'message',
+              new Message(
+                args.sender,
+                args.content,
+                args.room,
+                args.isGroupChat,
+                args.profileImage,
+                args.packageName,
+                net,
+                self
+              )
+            );
+            break;
+          case 'sent':
+            this.emit('sent', args === 'true');
+            break;
+          case 'evaled':
+            this.emit('evaled', args.toString());
+            break;
         }
-      );
-      socket.on('disconnect', () => {
-        console.log(`${socket.id} disconnected!`)
-      })
+      });
+
+      clients.push({ socket, net, uuid });
+      net.send('Hello, world!');
+
+      socket.on('end', () => {
+        console.log('socket end');
+      });
+      socket.on('close', () => {
+        console.log('socket close');
+      });
+      socket.on('error', (e) => {
+        console.log(e);
+      });
+    });
+
+    server.on('error', (e) => {
+      console.log(e);
     });
 
     server.listen(port, () => {
