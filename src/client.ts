@@ -8,11 +8,6 @@ const port = process.env.PORT || 3000;
 const client: Socket = new Socket();
 
 
-
-
-
-
-
 const wa = new Network('wasans', '172.30.1.14', 5000, (data) => {
   if (data.msg.includes('rash')) {
     // wa.send(JSON.stringify({
@@ -29,26 +24,15 @@ const wa = new Network('wasans', '172.30.1.14', 5000, (data) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 export type RKEvent = 'login' | 'message';
 
 export declare interface RKClient {
   on(event: 'message', listener: (message: Message) => void): this;
   on(event: 'login', listener: (port: number | string) => void): this;
+  on(event: 'sent', listener: (port: number | string) => void): this;
   once(event: 'message', listener: (message: Message) => void): this;
   once(event: 'login', listener: (port: number | string) => void): this;
+  once(event: 'sent', listener: (port: number | string) => void): this;
 }
 
 export class RKClient extends EventEmitter {
