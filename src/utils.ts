@@ -1,5 +1,5 @@
 import { createServer, Server, Socket } from 'net';
-import { RKServer } from './client';
+import { RKClient } from './client';
 import { Message } from './message';
 import { Worker } from './network';
 
@@ -10,7 +10,7 @@ export class RKUtils {
     this.profileImage = msg.getProfileImage();
   }
   private socket: Worker;
-  private server: RKServer;
+  private server: RKClient;
   private profileImage: string;
   async eval(x: string): Promise<string> {
     return new Promise((resolve, _) => {

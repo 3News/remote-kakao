@@ -1,25 +1,19 @@
-import { RKServer, Message } from './src';
+import { Socket } from 'net';
 
-const server = new RKServer();
-const prefix = '>';
+let client = new Socket();
 
-server.on('login', (port) => {
-  console.log(`Listening on :${port}`);
-});
+client.connect(
+  {
+    host: '172.30.1.14',
+    port: 5000,
+  },
+  () => {
+    client.on('data', (buffer) => {
+      console.log(buffer.toString().trim());
+    });
 
-server.on('message', async (msg: Message) => {
-  if (!msg.content.startsWith(prefix)) return;
-
-  const args = msg.content.slice(prefix.length).split(' ');
-  const cmd = args.shift();
-
-  if (cmd === 'ee') {
-    await msg.reply('ee').catch((reason: string) => {
-      if (reason === 'timeout') {
-        console.log('timeout!!!');
-      }
+    client.on('close', () => {
+      console.log('연결 끗 ㅋㅋ');
     });
   }
-});
-
-server.login();
+);
