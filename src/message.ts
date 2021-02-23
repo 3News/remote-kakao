@@ -1,11 +1,17 @@
 import { createServer, Server, Socket } from 'net';
-import { RKServer } from './client';
-import { Worker } from './network';
+import { RKClient } from './client';
+import { Network } from './network';
 import { KakaoLink, Plain } from './reply';
 import { KalingType } from './reply/KakaoLink';
 
 let queue: any = null;
 let ignored: number = 0;
+
+interface Kaling {
+  templateId: number;
+  templateArgs: { [key: string]: string };
+  kalingType: KalingType;
+}
 
 export type MessageType = 'KakaoLink' | 'plain';
 
@@ -17,8 +23,8 @@ export class Message {
     isGroupChat: boolean,
     profileImage: string,
     packageName: string,
-    socket: Worker,
-    server: RKServer
+    socket: Network,
+    client: RKClient
   ) {
     this.sender = sender;
     this.content = content;
@@ -27,7 +33,7 @@ export class Message {
     this.packageName = packageName;
     this.getProfileImage = () => profileImage;
     this.socket = socket;
-    this.server = server;
+    this.client = client;
   }
   public sender: string;
   public content: string;
@@ -35,50 +41,26 @@ export class Message {
   public isGroupChat: boolean;
   public packageName: string;
   public getProfileImage: () => string;
-  public socket: Worker;
-  public server: RKServer;
+  public socket: Network;
+  public client: RKClient;
   public async reply(content: string): Promise<boolean>;
-  public async reply(content: {
-    templateId: number;
-    templateArgs: { [key: string]: string };
-    kalingType: KalingType;
-  }): Promise<boolean>;
-  public async reply(
-    content:
-      | string
-      | {
-          templateId: number;
-          templateArgs: { [key: string]: string };
-          kalingType: KalingType;
-        }
-  ) {
-    return this.replyRoom(this.room, this.content);
+  public async reply(content: { templateId: number; templateArgs: { [key: string]: string }; kalingType: KalingType }): Promise<boolean>;
+  public async reply(content: string | Kaling) {
+    if (typeof content === 'string') {
+      return this.replyRoom(this.room, content);
+    } else {
+      return this.replyRoom(this.room, content);
+    }
   }
   public async replyRoom(room: string, content: string): Promise<boolean>;
-  public async replyRoom(
-    room: string,
-    content: {
-      templateId: number;
-      templateArgs: { [key: string]: string };
-      kalingType: KalingType;
-    }
-  ): Promise<boolean>;
-  public async replyRoom(
-    room: string,
-    content:
-      | string
-      | {
-          templateId: number;
-          templateArgs: { [key: string]: string };
-          kalingType: KalingType;
-        }
-  ) {
+  public async replyRoom(room: string, content: Kaling): Promise<boolean>;
+  public async replyRoom(room: string, content: string | Kaling) {
     return new Promise<boolean>((resolve, reject) => {
       if (this.socket === null) resolve(false);
       if (typeof content === 'string') {
         this.socket.send(
           JSON.stringify({
-            event: 'send',
+            state: 'message',
             args: new Plain(room, content as string),
           })
         );
@@ -88,12 +70,12 @@ export class Message {
           resolve(false);
         } else {
           const sentEvent = (res: boolean) => {
-            this.server.off('sent', sentEvent);
+            this.client.off('sent', sentEvent);
             console.log(`Ignored ${ignored} messages!`);
             ignored = 0;
             resolve(res);
           };
-          this.server.on('sent', sentEvent);
+          this.client.on('sent', sentEvent);
           queue = true;
 
           setTimeout(() => reject('timeout'), 10000);
