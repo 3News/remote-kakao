@@ -11,6 +11,12 @@ const handler = (data) => {
     case 'login':
       if (data.args.password === password) authed = true;
       Log.d('logged in: ' + authed);
+      send(
+        JSON.stringify({
+          event: 'login',
+          args: {},
+        })
+      );
       break;
     case 'message':
       Log.d(authed);
@@ -19,9 +25,28 @@ const handler = (data) => {
       if (Api.canReply(data.args.msg.room)) {
         switch (data.args.type) {
           case 'plain':
-            Api.replyRoom(data.args.msg.room, data.args.msg.content, true);
+            send(
+              JSON.stringify({
+                event: 'send',
+                args: {
+                  success: Api.replyRoom(
+                    data.args.msg.room,
+                    data.args.msg.content,
+                    true
+                  ),
+                },
+              })
+            );
             break;
           case 'kakaolink':
+            send(
+              JSON.stringify({
+                event: 'send',
+                args: {
+                  success: false,
+                },
+              })
+            );
             break;
         }
       }
@@ -39,7 +64,9 @@ const thread = new Thread({
           socket = server.accept();
 
           try {
-            const br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            const br = new BufferedReader(
+              new InputStreamReader(socket.getInputStream())
+            );
             const pw = new PrintWriter(socket.getOutputStream(), true);
 
             const str = br.readLine();
@@ -62,7 +89,7 @@ const thread = new Thread({
         }
       } catch (e) {
         Log.e(e);
-        
+
         server.close();
       }
     } catch (e) {
@@ -79,12 +106,15 @@ const response = (room, msg, sender, isGroupChat, _, imageDB, packageName) => {
 
   send(
     JSON.stringify({
-      room: room,
-      msg: msg,
-      sender: sender,
-      isGroupChat: isGroupChat,
-      imageDB: imageDB,
-      packageName: packageName,
+      event: 'message',
+      args: {
+        room: room,
+        content: msg,
+        sender: sender,
+        isGroupChat: isGroupChat,
+        profileImage: imageDB.getProfileBase64(),
+        packageName: packageName,
+      },
     })
   );
 };

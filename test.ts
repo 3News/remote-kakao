@@ -1,19 +1,9 @@
-import { Socket } from 'net';
+import { RKClient } from './src';
 
-let client = new Socket();
+const client = new RKClient();
 
-client.connect(
-  {
-    host: '172.30.1.14',
-    port: 5000,
-  },
-  () => {
-    client.on('data', (buffer) => {
-      console.log(buffer.toString().trim());
-    });
+client.on('message', (msg) => {
+  console.log(msg.content)
+})
 
-    client.on('close', () => {
-      console.log('연결 끗 ㅋㅋ');
-    });
-  }
-);
+client.login();

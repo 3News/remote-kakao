@@ -1,4 +1,4 @@
 export * from './client';
 export * from './reply';
-// export * from './utils';
-// export * from './message';
+export * from './utils';
+export * from './message';

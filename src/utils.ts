@@ -1,16 +1,16 @@
 import { createServer, Server, Socket } from 'net';
 import { RKClient } from './client';
 import { Message } from './message';
-import { Worker } from './network';
+import { Network } from './network';
 
 export class RKUtils {
   constructor(msg: Message) {
     this.socket = msg.socket;
-    this.server = msg.server;
+    this.client = msg.client;
     this.profileImage = msg.getProfileImage();
   }
-  private socket: Worker;
-  private server: RKClient;
+  private socket: Network;
+  private client: RKClient;
   private profileImage: string;
   async eval(x: string): Promise<string> {
     return new Promise((resolve, _) => {
@@ -20,7 +20,7 @@ export class RKUtils {
           args: x,
         })
       );
-      this.server.on('evaled', (arg: string) => {
+      this.client.on('eval', (arg: string) => {
         resolve(arg)
       })
     });

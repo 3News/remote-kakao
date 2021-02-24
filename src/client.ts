@@ -7,32 +7,33 @@ import { v4 } from 'uuid';
 const port = process.env.PORT || 3000;
 const client: Socket = new Socket();
 
-
-const wa = new Network('wasans', '172.30.1.14', 5000, (data) => {
-  if (data.msg.includes('rash')) {
-    // wa.send(JSON.stringify({
-    //   state: 'message',
-    //   args: {
-    //     type: 'plain',
-    //     msg: {
-    //       content: 'ee',
-    //       room: '카카오톡 봇 커뮤니티'
-    //     }
-    //   }
-    // }))
-    console.log('wa')
-  }
-});
+// const wa = new Network('wasans', '172.30.1.14', 5000, (data) => {
+//   if (data.msg.includes('rash')) {
+//     // wa.send(JSON.stringify({
+//     //   state: 'message',
+//     //   args: {
+//     //     type: 'plain',
+//     //     msg: {
+//     //       content: 'ee',
+//     //       room: '카카오톡 봇 커뮤니티'
+//     //     }
+//     //   }
+//     // }))
+//     console.log('wa')
+//   }
+// });
 
 export type RKEvent = 'login' | 'message';
 
 export declare interface RKClient {
   on(event: 'message', listener: (message: Message) => void): this;
   on(event: 'login', listener: (port: number | string) => void): this;
-  on(event: 'sent', listener: (port: number | string) => void): this;
+  on(event: 'send', listener: (success: boolean) => void): this;
+  on(event: 'eval', listener: (arg: string) => void): this;
   once(event: 'message', listener: (message: Message) => void): this;
   once(event: 'login', listener: (port: number | string) => void): this;
-  once(event: 'sent', listener: (port: number | string) => void): this;
+  once(event: 'send', listener: (success: boolean) => void): this;
+  once(event: 'eval', listener: (arg: string) => void): this;
 }
 
 export class RKClient extends EventEmitter {
@@ -42,7 +43,11 @@ export class RKClient extends EventEmitter {
 
   public login(useKakaoLink: true, email: string, password: string): void;
   public login(useKakaoLink?: false): void;
-  public login(useKakaoLink?: boolean, email?: string, password?: string): void {
+  public login(
+    useKakaoLink?: boolean,
+    email?: string,
+    password?: string
+  ): void {
     if (!!useKakaoLink) {
       this.email = String(email);
       this.password = String(password);
@@ -50,42 +55,73 @@ export class RKClient extends EventEmitter {
 
     const self = this;
 
-    client.setKeepAlive(true);
+    const net = new Network('wasans', '172.30.1.14', 5000, client, (data) => {
+      const { event, args } = JSON.parse(data.toString());
 
-    // client.connect(
-    //   {
-    //     host: '172.30.1.15',
-    //     port: 9500,
-    //   },
-    //   () => {
-    //     client.write(
-    //       JSON.stringify({
-    //         name: 'debugRoom',
-    //         data: {
-    //           botName: 'RKCompanion',
-    //           authorName: 'remote-kakao',
-    //           roomName: 'remote-kakao',
-    //           isGroupChat: false,
-    //           packageName: 'com.kakao.talk',
-    //           message: {
-    //             content: 'wasans'
-    //           },
-    //         },
-    //       })
-    //     );
-    //     client.end()
-
-    //     client.on('data', (c) => {
-    //       console.log(c.toString())
-    //     })
-
-    //     client.on('data', () => {
-    //       console.log('연결 끗 ㅋㅋ')
-    //     })
-    //   }
-    // );
+      switch (event) {
+        case 'login':
+          self.emit('login')
+          break;
+        case 'message':
+          self.emit(
+            'message',
+            new Message(
+              args.sender,
+              args.content,
+              args.room,
+              args.isGroupChat,
+              args.profileImage,
+              args.packageName,
+              net,
+              self
+            )
+          );
+          break;
+        case 'send':
+          this.emit('send', args.success);
+          break;
+        case 'eval':
+          this.emit('eval', args.toString());
+          break;
+      }
+    });
   }
 }
+
+// client.connect(
+//   {
+//     host: '172.30.1.15',
+//     port: 9500,
+//   },
+//   () => {
+//     client.write(
+//       JSON.stringify({
+//         name: 'debugRoom',
+//         data: {
+//           botName: 'RKCompanion',
+//           authorName: 'remote-kakao',
+//           roomName: 'remote-kakao',
+//           isGroupChat: false,
+//           packageName: 'com.kakao.talk',
+//           message: {
+//             content: 'wasans'
+//           },
+//         },
+//       })
+//     );
+//     client.end()
+
+//     client.on('data', (c) => {
+//       console.log(c.toString())
+//     })
+
+//     client.on('data', () => {
+//       console.log('연결 끗 ㅋㅋ')
+//     })
+//   }
+// );
+//   }
+// }
 
 // export class RKServer extends EventEmitter {
 //   private email: string = '';
@@ -160,4 +196,3 @@ export class RKClient extends EventEmitter {
 //       this.emit('login', port);
 //     });
 //   }
-// }

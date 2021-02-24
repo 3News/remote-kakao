@@ -44,7 +44,11 @@ export class Message {
   public socket: Network;
   public client: RKClient;
   public async reply(content: string): Promise<boolean>;
-  public async reply(content: { templateId: number; templateArgs: { [key: string]: string }; kalingType: KalingType }): Promise<boolean>;
+  public async reply(content: {
+    templateId: number;
+    templateArgs: { [key: string]: string };
+    kalingType: KalingType;
+  }): Promise<boolean>;
   public async reply(content: string | Kaling) {
     if (typeof content === 'string') {
       return this.replyRoom(this.room, content);
@@ -69,13 +73,13 @@ export class Message {
           ++ignored;
           resolve(false);
         } else {
-          const sentEvent = (res: boolean) => {
-            this.client.off('sent', sentEvent);
+          const sendEvent = (res: boolean) => {
+            this.client.off('send', sendEvent);
             console.log(`Ignored ${ignored} messages!`);
             ignored = 0;
             resolve(res);
           };
-          this.client.on('sent', sentEvent);
+          this.client.on('send', sendEvent);
           queue = true;
 
           setTimeout(() => reject('timeout'), 10000);
@@ -110,13 +114,13 @@ export class Message {
           ++ignored;
           resolve(false);
         } else {
-          const sentEvent = (res: boolean) => {
-            this.server.off('sent', sentEvent);
+          const sendEvent = (res: boolean) => {
+            this.client.off('send', sendEvent);
             console.log(`Ignored ${ignored} messages!`);
             ignored = 0;
             resolve(res);
           };
-          this.server.on('sent', sentEvent);
+          this.client.on('send', sendEvent);
           queue = true;
 
           setTimeout(() => reject('timeout'), 10000);
